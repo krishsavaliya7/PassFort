@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Generator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        .sidebar.open {
+            transform: translateX(0) !important;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+        }
+        .alert-toast {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .alert-toast.show {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex flex-col min-h-screen">
+    <!-- Alert Toast -->
+    <div id="alertToast" class="alert-toast z-50">
+        <div class="bg-white shadow-lg rounded-lg p-4 flex items-center space-x-2">
+            <span id="alertIcon" class="text-xl"></span>
+            <span id="alertMessage" class="text-sm"></span>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Button -->
+    <button id="menuButton" class="md:hidden fixed top-4 left-4 z-50 bg-white p-2 rounded-lg shadow-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+        </svg>
+    </button>
+
+    <!-- Overlay for mobile -->
+    <div id="overlay" class="fixed inset-0 bg-black opacity-50 z-30 hidden md:hidden"></div>
+
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar fixed top-0 left-0 h-screen w-64 bg-white shadow-lg z-40 p-6 overflow-y-auto">
+        <h2 class="text-lg font-semibold text-gray-900 mb-4">PassFort</h2>
+        <ul class="space-y-2">
+            <li><a href="index.html" class="block p-2 text-gray-700 hover:bg-gray-200 rounded-lg transition">Home</a></li>
+            <li><a href="#" class="block p-2 text-gray-700 hover:bg-gray-200 rounded-lg transition">Dashboard</a></li>
+            <li><a href="#" class="block p-2 text-gray-700 hover:bg-gray-200 rounded-lg transition">Password Generator</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 p-4 md:ml-72 flex flex-col items-center justify-center min-h-screen">
+        <!-- Password Generator Section -->
+        <div class="bg-white shadow-lg rounded-lg p-4 md:p-8 flex flex-col items-center space-y-4 w-full max-w-5xl mx-4">
+            <h1 class="text-2xl md:text-3xl font-semibold text-center">Random Password Generator</h1>
+            <p class="text-gray-500 text-sm text-center">Create strong and secure passwords to keep your account safe online.</p>
+            
+            <!-- Warning Message -->
+            <div id="warningMessage" class="hidden w-full text-red-500 text-sm text-center"></div>
+            
+            <!-- Password Display & Actions -->
+            <div class="flex flex-col md:flex-row items-center w-full space-y-3 md:space-y-0 md:space-x-3">
+                <input type="text" id="password" class="w-full px-4 py-2 border rounded-lg text-lg" readonly>
+                <button id="generateBtn" class="w-full md:w-auto p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button id="copyBtn" class="w-full md:w-auto px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition">Copy</button>
+            </div>
+            
+            <!-- Password Length & Strength -->
+            <div class="flex flex-col md:flex-row items-start md:items-center w-full space-y-3 md:space-y-0 md:space-x-4">
+                <div class="flex items-center space-x-2">
+                    <label class="text-sm font-medium">Password Length:</label>
+                    <input type="number" id="lengthInput" min="6" max="20" value="12" class="w-20 px-2 py-1 border rounded-lg text-center">
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="font-medium">Strength:</span>
+                    <span id="strengthIndicator" class="px-3 py-1 bg-green-500 text-white rounded-lg">Strong</span>
+                </div>
+            </div>
+            
+            <!-- Character Type Selection -->
+            <div class="flex flex-wrap w-full gap-4 justify-center md:justify-start">
+                <span class="font-medium w-full md:w-auto text-center md:text-left">Characters Used:</span>
+                <div class="flex flex-wrap gap-4 justify-center md:justify-start">
+                    <label class="flex items-center"><input type="checkbox" id="uppercase" checked class="mr-1"> ABC</label>
+                    <label class="flex items-center"><input type="checkbox" id="lowercase" checked class="mr-1"> abc</label>
+                    <label class="flex items-center"><input type="checkbox" id="numbers" checked class="mr-1"> 123</label>
+                    <label class="flex items-center"><input type="checkbox" id="symbols" checked class="mr-1"> #$&</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mobile menu functionality
+        const menuButton = document.getElementById('menuButton');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        const warningMessage = document.getElementById('warningMessage');
+        const alertToast = document.getElementById('alertToast');
+        const alertIcon = document.getElementById('alertIcon');
+        const alertMessage = document.getElementById('alertMessage');
+
+        menuButton.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('hidden');
+        });
+
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.add('hidden');
+        });
+
+        // Show toast notification
+        const showToast = (message, type = 'success') => {
+            alertIcon.innerHTML = type === 'success' ? '✓' : '⚠️';
+            alertMessage.textContent = message;
+            alertToast.classList.add('show');
+            
+            // Set color based on type
+            const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
+            alertIcon.className = `text-xl ${iconColor}`;
+
+            setTimeout(() => {
+                alertToast.classList.remove('show');
+            }, 3000);
+        };
+
+        // Password generator functionality
+        const passwordField = document.getElementById("password");
+        const generateBtn = document.getElementById("generateBtn");
+        const copyBtn = document.getElementById("copyBtn");
+        const lengthInput = document.getElementById("lengthInput");
+        const strengthIndicator = document.getElementById("strengthIndicator");
+        const uppercase = document.getElementById("uppercase");
+        const lowercase = document.getElementById("lowercase");
+        const numbers = document.getElementById("numbers");
+        const symbols = document.getElementById("symbols");
+
+        const validateInputs = () => {
+            const length = parseInt(lengthInput.value);
+            warningMessage.classList.add('hidden');
+            
+            if (isNaN(length) || length < 6 || length > 20) {
+                warningMessage.textContent = "Password length must be between 6 and 20 characters.";
+                warningMessage.classList.remove('hidden');
+                return false;
+            }
+
+            if (!uppercase.checked && !lowercase.checked && !numbers.checked && !symbols.checked) {
+                warningMessage.textContent = "Please select at least one character type.";
+                warningMessage.classList.remove('hidden');
+                return false;
+            }
+
+            return true;
+        };
+
+        const generatePassword = () => {
+            if (!validateInputs()) return;
+
+            let chars = "";
+            let password = "";
+            if (uppercase.checked) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            if (lowercase.checked) chars += "abcdefghijklmnopqrstuvwxyz";
+            if (numbers.checked) chars += "0123456789";
+            if (symbols.checked) chars += "!@#$%^&*()_+-=[]{}|;:,.<>?";
+
+            for (let i = 0; i < parseInt(lengthInput.value); i++) {
+                password += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            passwordField.value = password;
+            updateStrength(password);
+        };
+
+        const updateStrength = (password) => {
+            let strength = "Weak";
+            if (password.length > 10) strength = "Medium";
+            if (password.length > 14) strength = "Strong";
+
+            strengthIndicator.textContent = strength;
+            strengthIndicator.className = strength === "Weak" ? "px-3 py-1 bg-red-500 text-white rounded-lg"
+                : strength === "Medium" ? "px-3 py-1 bg-yellow-500 text-white rounded-lg"
+                : "px-3 py-1 bg-green-500 text-white rounded-lg";
+        };
+
+        lengthInput.addEventListener("input", () => {
+            if (validateInputs()) {
+                generatePassword();
+            }
+        });
+
+        generateBtn.addEventListener("click", generatePassword);
+        
+        copyBtn.addEventListener("click", () => {
+            if (passwordField.value) {
+                navigator.clipboard.writeText(passwordField.value);
+                showToast("Password copied to clipboard!", "success");
+            } else {
+                showToast("No password to copy!", "error");
+            }
+        });
+
+        // Checkbox event listeners
+        [uppercase, lowercase, numbers, symbols].forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                if (validateInputs()) {
+                    generatePassword();
+                }
+            });
+        });
+
+        // Generate initial password
+        generatePassword();
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/js/all.min.js"></script>
+</body>
+</html>
